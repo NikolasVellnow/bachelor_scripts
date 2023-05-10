@@ -2,8 +2,6 @@
 
 ## Aims
 
-
-
 ## Download data?
 First I downloaded the bcf-file with firefox from https://dest.bio/data-files/SNP-tables#bcf-files
 Then I extracted the data of interest, i.e. of the Linvilla population with the following shell script.
