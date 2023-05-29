@@ -43,15 +43,15 @@ mv *_subset.bam subsets/
 ```
 
 ## Create textfile with coverages of bams
-samtools depth -a -H -f bam_file_list.txt coverage_S1_s4_s20.txt
 
-
-## Setup miniconda environments
+```sh
+samtools depth -a -H -f bam_file_list.txt > coverage_S1_s4_s20.txt
+```
 
 
 ## Look at file sizes and raw data more generally
 
-# Count number of reads in bam files
+### Count number of reads in bam files
 I counted the number of reads in the bam files with the shell-script `num_reads_bams.sh`:
 
 ```sh
