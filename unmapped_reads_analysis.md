@@ -21,7 +21,7 @@ Then I extracted the data of interest, i.e. of the Linvilla population with the 
 
 ## Look at file sizes and raw data more generally
 
-# Count number of reads in bam files
+### Count number of reads in bam files
 I counted the number of reads in the bam files with the shell-script `num_reads_bams.sh`:
 
 ```
@@ -37,7 +37,7 @@ done > num_reads.txt
 
 ```
 
-# Distribution of read lengths
+### Distribution of read lengths
 
 
 ```sh
