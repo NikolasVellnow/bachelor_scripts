@@ -7,10 +7,16 @@
 ```sh
 #!/bin/bash
 
+# activate conda environment with samtools
+conda activate samtools
+
 for file in *.bam
 do
 	samtools index $file
 done
+
+# deactivate samtools environment
+conda deactivate
 
 ```
 ## Subsetting of bam files
