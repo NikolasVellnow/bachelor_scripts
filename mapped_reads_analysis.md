@@ -21,7 +21,26 @@ conda deactivate
 ```
 ## Subsetting of bam files
 Subset bam files with `subset_bams.sh` script:
-...
+```sh
+#!/bin/bash
+
+conda activate samtools
+
+mkdir subsets
+
+for file in *.bam
+do	
+	FILENAME="$file"
+	FILENAME=${FILENAME%.bam*}
+	echo $FILENAME
+	samtools view -bo "$FILENAME"_subset.bam -s 123.001 "$file"
+done
+
+conda deactivate
+
+# move subset-bams into the subset directory
+mv *_subset.bam subsets/
+```
 
 ## Create textfile with coverages of bams
 samtools depth -a -H -f bam_file_list.txt coverage_S1_s4_s20.txt
