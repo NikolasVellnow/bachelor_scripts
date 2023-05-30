@@ -1,0 +1,5 @@
+# ignore all .log files
+*.log
+
+# ignore slurm log files
+slurm*.out
