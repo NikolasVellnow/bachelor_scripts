@@ -8,6 +8,6 @@ do
 	FILENAME=${FILENAME%.bam*}
 	echo $FILENAME
 	
-	samtools fasta $file > "$FILENAME".fasta
+	samtools fasta -@ 4 $file > "$FILENAME".fasta
 done
 

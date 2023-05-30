@@ -4,6 +4,6 @@
 
 for file in *.bam
 do	
-	samtools index $file
+	samtools index -@ 4 $file
 done
 
