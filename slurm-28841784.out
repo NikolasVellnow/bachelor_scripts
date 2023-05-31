@@ -1,6 +1,0 @@
-mkdir: cannot create directory ‘/scratch/mnikvell/kraken_job/’: No such file or directory
-mkdir: cannot create directory ‘/scratch/mnikvell/kraken_job/kraken_outputs’: No such file or directory
-cp: cannot create directory ‘/scratch/mnikvell/kraken_job/’: No such file or directory
-cp: cannot create regular file ‘/scratch/mnikvell/kraken_job/’: No such file or directory
-/var/spool/slurm/d/job28841784/slurm_script: line 35: cd: scratch/mnikvell/kraken_job/: No such file or directory
-kraken2: database ("/scratch/mnikvell/kraken_job/PlusPFP-16/PlusPFP-16") does not contain necessary file taxo.k2d

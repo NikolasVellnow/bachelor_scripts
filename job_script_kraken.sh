@@ -37,7 +37,7 @@ echo "content of job dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/)"
 cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
 
-for file in ${FILE_PATH}S*.fasta
+for file in ${FILE_PATH}*.fasta
 do	
 	FILE_NAME=$(basename "$file")
 	echo "file name: ${FILE_NAME}"
