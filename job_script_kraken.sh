@@ -1,10 +1,10 @@
 #!/bin/bash -l
 #SBATCH --partition=med
-#SBATCH --nodes=4
+#SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=08:00:00 
-#SBATCH --cpus-per-task=16
-#SBATCH --mem-per-cpu=12G
+#SBATCH --time=01:10:00 
+#SBATCH --cpus-per-task=32
+#SBATCH --mem-per-cpu=6G
 #SBATCH --job-name=kraken_job
 #SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
 #SBATCH --mail-type=All
@@ -37,7 +37,7 @@ echo "content of job dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/)"
 cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
 
-for file in ${FILE_PATH}S1*.fasta
+for file in ${FILE_PATH}S2*.fasta
 do	
 	FILE_NAME=$(basename "$file")
 	echo "file name: ${FILE_NAME}"
@@ -56,16 +56,13 @@ do
 	--output ${OUT_PATH}${OUTPUT_NAME} \
 	--use-names \
 	--report ${OUT_PATH}${REPORT_NAME} \
-	--threads 16 \
+	--threads 32 \
 	${FILE_NAME}
 
 	# delete fasta-file from scratch dir after classifying it
 	rm "/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${FILE_NAME}"
 
 done
-
-# TEST_VAR=$(ls /scratch/mnikvell/kraken_job/)
-# echo $TEST_VAR
 
 
 # copy outputs back to

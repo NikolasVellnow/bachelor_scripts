@@ -1,59 +1,56 @@
-#!/bin/bash
+#!/bin/bash -l
+#SBATCH --partition=short
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=00:40:00 
+#SBATCH --cpus-per-task=32
+#SBATCH --mem-per-cpu=6G
+#SBATCH --job-name=kraken_build_job
+#SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
+#SBATCH --mail-type=All
 
-VAR=999
+conda activate kraken
 
-
-
-
-DB_NAME=PlusPFP-16
-DB_PATH=/work/mnikvell/kraken_job_${VAR}/${DB_NAME}/
-OUT_PATH=/work/mnikvell/kraken_job_${VAR}/kraken_outputs_${VAR}/
-FILE_PATH=/work/mnikvell/data/unmapped_reads/subsets/
+DB_NAME=archaea_bloodparasite
+DB_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/
+OUT_PATH=/work/mnikvell/data/Kraken2/dbs/
 
 echo "db name: ${DB_NAME}"
 echo "db path: ${DB_PATH}"
 echo "output path: ${OUT_PATH}"
-echo "file path: ${FILE_PATH}"
 
 # create directories in scratch-dir
-rm -rf /work/mnikvell/kraken_job_${VAR}/
-mkdir -p /work/mnikvell/kraken_job_${VAR}/
-mkdir -p /work/mnikvell/kraken_job_${VAR}/kraken_outputs
-mkdir -p /work/mnikvell/kraken_job_${VAR}/${DB_NAME}
+rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}
 
-# move database to scratch-dir
-cp -a -v "/work/mnikvell/data/Kraken2/dbs/${DB_NAME}/." "/work/mnikvell/kraken_job_${VAR}/${DB_NAME}/"
-echo "content of job dir: $(ls /work/mnikvell/kraken_job_${VAR}/)"
-echo "content of job/db dir: $(ls /work/mnikvell/kraken_job_${VAR}/${DB_NAME}/)"
-
-echo "content of db dir: $(ls ${DB_PATH})"
-
-# move to file directory
-cd /work/mnikvell/data/unmapped_reads/
-echo "content of file dir: $(ls $FILE_PATH)"
 
 # move to job directory
-cd /work/mnikvell/kraken_job_${VAR}/
+cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+
+# copy taxonomy
+cp -a /work/mnikvell/data/Kraken2/dbs/taxonomy $DB_PATH
+
+# install libraries
+echo 'installing archaea'
+kraken2-build --download-library archaea --db "${DB_PATH}"
+
+# add genomes (already downloaded) to library
+
+echo 'genome blood parasite'
+kraken2-build --add-to-library /work/mnikvell/data/genomes/genbank/protozoa/GCA_001625125.1/GCA_001625125.1_ASM162512v1_genomic.fna \
+--db "${DB_PATH}"
+
+# build database
+kraken2-build --build --db "${DB_PATH}" --threads 32
 
 
-for file in "${FILE_PATH}"S*.fasta
-do	
-	echo "file: ${file}"
-	FILE_NAME=$(basename "$file")
-	#FILE_NAME="${FILE_NAME}.fasta"
-	echo "file name: ${FILE_NAME}"
-	OUTPUT_NAME=output_${FILE_NAME}_${DB_NAME}
-	echo "output name: ${OUTPUT_NAME}"
-	REPORT_NAME=report_${FILE_NAME}_${DB_NAME}
-	echo "report name: ${REPORT_NAME}"
-	
-	# move file to scratch-dir
-	cp -v ${FILE_PATH}${FILE_NAME} /work/mnikvell/kraken_job_${VAR}/
 
-	# delete fasta-file from scratch dir after classifying it
-	rm "/work/mnikvell/kraken_job_${VAR}/${FILE_NAME}"
+# copy outputs back to
+cp -a $DB_PATH $OUT_PATH
 
-done
+rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
-rm -rf /work/mnikvell/kraken_job_${VAR}/
+conda deactivate
+
 
