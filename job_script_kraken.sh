@@ -3,15 +3,15 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=01:10:00 
-#SBATCH --cpus-per-task=32
-#SBATCH --mem-per-cpu=6G
+#SBATCH --cpus-per-task=16
+#SBATCH --mem-per-cpu=12G
 #SBATCH --job-name=kraken_job
 #SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
 #SBATCH --mail-type=All
 
 conda activate kraken
 
-DB_NAME=PlusPFP
+DB_NAME=EuPathDB46
 DB_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/
 OUT_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/kraken_outputs_${SLURM_JOBID}/
 FILE_PATH=/work/mnikvell/data/unmapped_reads/
@@ -37,7 +37,7 @@ echo "content of job dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/)"
 cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
 
-for file in ${FILE_PATH}S2*.fasta
+for file in ${FILE_PATH}SR*.fasta
 do	
 	FILE_NAME=$(basename "$file")
 	echo "file name: ${FILE_NAME}"
