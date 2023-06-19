@@ -11,8 +11,8 @@
 
 conda activate kraken
 
-#FILE_NAME=SRR5423301_sorted_dedup_unmapped.fasta
-FILE_NAME=S1_EKDN230004350-1A_HNW2NDSX_sorted_dedup_unmapped.fasta
+FILE_NAME=SRR5423301_sorted_dedup_unmapped.fasta
+#FILE_NAME=S1_EKDN230004350-1A_HNW2NDSX_sorted_dedup_unmapped.fasta
 DB_NAME=viral_5_birds
 DB_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/
 OUT_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/kraken_outputs_${SLURM_JOBID}/
@@ -39,11 +39,14 @@ echo "content of job dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/)"
 # move to job directory
 cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
-	
 
-OUTPUT_NAME=output_${FILE_NAME}_${DB_NAME}
+OUTPUT_NAME=output_${FILE_NAME%.*}_${DB_NAME}
 echo "output name: ${OUTPUT_NAME}"
-REPORT_NAME=report_${FILE_NAME}_${DB_NAME}
+CLASSIFIED_NAME=classified_${FILE_NAME%.*}_${DB_NAME}.fasta
+echo "classified output name: ${CLASSIFIED_NAME}"
+UNCLASSIFIED_NAME=unclassified_${FILE_NAME%.*}_${DB_NAME}.fasta
+echo "unclassified output name: ${UNCLASSIFIED_NAME}"
+REPORT_NAME=report_${FILE_NAME%.*}_${DB_NAME}
 echo "report name: ${REPORT_NAME}"
 	
 	
@@ -56,6 +59,8 @@ kraken2 \
 --output ${OUT_PATH}${OUTPUT_NAME} \
 --use-names \
 --report ${OUT_PATH}${REPORT_NAME} \
+--classified-out ${OUT_PATH}${CLASSIFIED_NAME} \
+--unclassified-out ${OUT_PATH}${UNCLASSIFIED_NAME} \
 --threads 12 \
 ${FILE_NAME}
 
