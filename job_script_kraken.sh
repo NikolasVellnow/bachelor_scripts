@@ -39,10 +39,13 @@ echo "content of job dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/)"
 cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
 	
-
-OUTPUT_NAME=output_${FILE_NAME}_${DB_NAME}
+OUTPUT_NAME=output_${FILE_NAME%.*}_${DB_NAME}
 echo "output name: ${OUTPUT_NAME}"
-REPORT_NAME=report_${FILE_NAME}_${DB_NAME}
+CLASSIFIED_NAME=classified_${FILE_NAME%.*}_${DB_NAME}.fasta
+echo "classified output name: ${CLASSIFIED_NAME}"
+UNCLASSIFIED_NAME=unclassified_${FILE_NAME%.*}_${DB_NAME}.fasta
+echo "unclassified output name: ${UNCLASSIFIED_NAME}"
+REPORT_NAME=report_${FILE_NAME%.*}_${DB_NAME}
 echo "report name: ${REPORT_NAME}"
 	
 	
@@ -55,6 +58,8 @@ kraken2 \
 --output ${OUT_PATH}${OUTPUT_NAME} \
 --use-names \
 --report ${OUT_PATH}${REPORT_NAME} \
+--classified-out ${OUT_PATH}${CLASSIFIED_NAME} \
+--unclassified-out ${OUT_PATH}${UNCLASSIFIED_NAME} \
 --threads 32 \
 ${FILE_NAME}
 
@@ -63,7 +68,7 @@ rm "/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${FILE_NAME}"
 
 
 # copy outputs back to
-cp -a "${OUT_PATH}." /"work/mnikvell/data/unmapped_reads/kraken_outputs_full_db/"
+cp -a "${OUT_PATH}." /"work/mnikvell/data/unmapped_reads/kraken_outputs_${DB_NAME}_db/"
 rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
 conda deactivate
