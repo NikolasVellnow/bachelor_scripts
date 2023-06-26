@@ -2,7 +2,7 @@
 #SBATCH --partition=short
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=01:15:00 
+#SBATCH --time=01:30:00 
 #SBATCH --cpus-per-task=32
 #SBATCH --mem-per-cpu=6G
 #SBATCH --job-name=kraken_job
@@ -12,7 +12,7 @@
 conda activate kraken
 
 FILE_NAME=$1
-DB_NAME=full
+DB_NAME=full_5_birds
 DB_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/
 OUT_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/kraken_outputs_${SLURM_JOBID}/
 FILE_PATH=/work/mnikvell/data/unmapped_reads/
@@ -60,12 +60,18 @@ kraken2 \
 --report ${OUT_PATH}${REPORT_NAME} \
 --classified-out ${OUT_PATH}${CLASSIFIED_NAME} \
 --unclassified-out ${OUT_PATH}${UNCLASSIFIED_NAME} \
+--confidence 0.1 \
 --threads 32 \
 ${FILE_NAME}
 
 # delete fasta-file from scratch dir after classifying it
 rm "/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${FILE_NAME}"
 
+cd ${OUT_PATH}
+# zip large files
+gzip output*
+gzip classified*
+gzip unclassified*
 
 # copy outputs back to
 cp -a "${OUT_PATH}." /"work/mnikvell/data/unmapped_reads/kraken_outputs_${DB_NAME}_db/"
