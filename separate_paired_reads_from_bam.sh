@@ -3,6 +3,7 @@
 
 SCRIPT_PATH=${PWD}
 
+# input path to directory with sample .fq-files
 DATA_PATH=$1
 
 cd ${DATA_PATH}

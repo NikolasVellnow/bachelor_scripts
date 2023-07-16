@@ -22,3 +22,13 @@ abyss-pe name=S1 j=4 k=80 B=6G in='../paired1.fq.gz ../paired2.fq.gz' se='../sin
 
 
 ```
+
+## Calculate cintiguity stats for all files in respective directories
+sh```
+
+abyss-fac -s 200 S1_k*/S1j\=32-unitigs.fa
+
+
+
+abyss-fac -s 200 *_unmapped_k85_kc2/*32-unitigs.fa
+```
