@@ -10,6 +10,7 @@
 # activate conda environment with samtools
 conda activate samtools
 
+# create index files for bams
 for file in *.bam
 do
 	samtools index $file
