@@ -1,6 +1,8 @@
 #!/bin/bash
 
 
+
+
 # blue tit genome
 ncbi-genome-download --section genbank vertebrate_other -A GCA_002901205.1 -F fasta,assembly-report -p 4 -r 3 -P -o /work/mnikvell/data/genomes/
 
