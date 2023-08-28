@@ -21,7 +21,7 @@ echo "folder name: ${FOLDER_NAME}"
 echo "folder path: ${FOLDER_PATH}"
 echo "output path: ${OUT_PATH}"
 
-# create directories in scratch-dir
+# create directories in scratch-dir (and delete previous ones)
 rm -rf /scratch/mnikvell/*
 mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/${FOLDER_NAME}
