@@ -22,7 +22,7 @@ echo "folder path: ${FOLDER_PATH}"
 echo "output path: ${OUT_PATH}"
 
 # create directories in scratch-dir (and delete previous ones)
-rm -rf /scratch/mnikvell/*
+rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
 # copy already downloaded libraries to scratch-dir

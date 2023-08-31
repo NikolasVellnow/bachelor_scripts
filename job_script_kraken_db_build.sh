@@ -22,8 +22,7 @@ echo "db path: ${DB_PATH}"
 echo "output path: ${OUT_PATH}"
 
 
-# create directories in scratch-dir (and delete previous ones)
-rm -rf /scratch/mnikvell/*
+# create directories in scratch-dir
 mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
 # copy library with added genomes into scratch-dir
