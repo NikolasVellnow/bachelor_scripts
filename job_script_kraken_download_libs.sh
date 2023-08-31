@@ -4,7 +4,7 @@
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=20:00:00 
 #SBATCH --cpus-per-task=32
-#SBATCH --mem-per-cpu=6G
+#SBATCH --mem-per-cpu=2G
 #SBATCH --job-name=kraken_download_libs_job
 #SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
 #SBATCH --mail-type=All
