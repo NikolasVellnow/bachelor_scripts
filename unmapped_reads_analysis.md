@@ -166,11 +166,339 @@ ncbi-genome-download --section genbank vertebrate_other -A GCA_003957565.4 -F fa
 
 ```
 
+In order to "be more modular" and make sending job to lido-cluster easier, I divided the building of the kraken and braken dbs and the classification of samples into several steps that could be sent off to the cluster as separate jobs.
 
 ### Shell script to download up-to-date taxonomy and libraries on lido3-cluster
 
+```sh
+#!/bin/bash -l
+#SBATCH --partition=long
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=20:00:00 
+#SBATCH --cpus-per-task=20
+#SBATCH --mem-per-cpu=2G
+#SBATCH --job-name=kraken_download_libs_job
+#SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
+#SBATCH --mail-type=All
+
+conda activate kraken
+
+THREAD_NUM=20
+FOLDER_NAME=full_libs_downloaded
+FOLDER_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${FOLDER_NAME}/
+OUT_PATH=/work/mnikvell/data/Kraken2/dbs/
+
+echo "folder name: ${FOLDER_NAME}"
+echo "folder path: ${FOLDER_PATH}"
+echo "output path: ${OUT_PATH}"
+
+# create directories in scratch-dir
+rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/${FOLDER_NAME}
 
 
+# scratch directory
+echo "content of scratch dir: $(ls -R /scratch/mnikvell/)"
+
+# move to job directory
+cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+
+
+# download taxonomy
+kraken2-build --download-taxonomy --threads ${THREAD_NUM} --db "${FOLDER_PATH}"
+
+# download most dbs
+echo 'archaea'
+kraken2-build --download-library archaea --threads ${THREAD_NUM} --db "${FOLDER_PATH}"
+
+echo 'bacteria'
+kraken2-build --download-library bacteria --threads ${THREAD_NUM} --db "${FOLDER_PATH}"
+
+echo 'plasmid'
+kraken2-build --download-library plasmid --threads ${THREAD_NUM} --db "${FOLDER_PATH}"
+
+echo 'viral'
+kraken2-build --download-library viral --threads ${THREAD_NUM} --db "${FOLDER_PATH}"
+
+echo 'human'
+kraken2-build --download-library human --threads ${THREAD_NUM} --db "${FOLDER_PATH}"
+
+echo 'fungi'
+kraken2-build --download-library fungi --threads ${THREAD_NUM} --db "${FOLDER_PATH}"
+
+echo 'plant'
+kraken2-build --download-library plant --threads ${THREAD_NUM} --db "${FOLDER_PATH}"
+
+echo 'protozoa'
+kraken2-build --download-library protozoa --threads ${THREAD_NUM} --db "${FOLDER_PATH}"
+
+echo 'UniVec_Core'
+kraken2-build --download-library UniVec_Core --threads ${THREAD_NUM} --db "${FOLDER_PATH}"
+
+# check what folders are there now
+echo "content of folder with transferred data in scratch dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/${FOLDER_NAME}/)"
+
+# copy outputs back to
+cp -a $FOLDER_PATH $OUT_PATH
+
+rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+
+conda deactivate
+
+```
+
+
+### Shell script to add downloaded genomes to libraries on lido3-cluster
+
+```sh
+#!/bin/bash -l
+#SBATCH --partition=med
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=4:00:00 
+#SBATCH --cpus-per-task=32
+#SBATCH --mem-per-cpu=2G
+#SBATCH --job-name=kraken_add_genomes_job
+#SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
+#SBATCH --mail-type=All
+
+conda activate kraken
+
+THREAD_NUM=32
+SOURCE_NAME=/home/mnikvell/Desktop/work/data/Kraken2/dbs/full_libs_downloaded/
+FOLDER_NAME=full_libs_added_genomes
+FOLDER_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${FOLDER_NAME}/
+OUT_PATH=/work/mnikvell/data/Kraken2/dbs/
+
+echo "folder name: ${FOLDER_NAME}"
+echo "folder path: ${FOLDER_PATH}"
+echo "output path: ${OUT_PATH}"
+
+# create directories in scratch-dir (and delete previous ones)
+rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+
+# copy already downloaded libraries to scratch-dir
+cp -r $SOURCE_NAME $FOLDER_PATH
+
+# scratch directory
+echo "content of mnikvell in scratch dir: $(ls /scratch/mnikvell/)"
+echo "content of folder with transferred data in scratch dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/${FOLDER_NAME}/)"
+
+# move to job directory
+cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+
+
+# add genomes (already downloaded) to library
+echo 'genome chicken'
+kraken2-build -add-to-library /work/mnikvell/data/genomes/genbank/vertebrate_other/GCA_016699485.1/GCA_016699485.1_bGalGal1.mat.broiler.GRCg7b_genomic.fna \
+--db "${FOLDER_PATH}" --threads ${THREAD_NUM}
+
+echo 'genome great tit'
+kraken2-build -add-to-library /work/mnikvell/data/genomes/genbank/vertebrate_other/GCA_001522545.3/GCA_001522545.3_Parus_major1.1_genomic.fna \
+--db "${FOLDER_PATH}" --threads ${THREAD_NUM}
+
+echo 'genome blue tit'
+kraken2-build -add-to-library /work/mnikvell/data/genomes/genbank/vertebrate_other/GCA_002901205.1/GCA_002901205.1_cyaCae2_genomic.fna \
+--db "${FOLDER_PATH}" --threads ${THREAD_NUM}
+
+echo 'genome zebra finch'
+kraken2-build -add-to-library /work/mnikvell/data/genomes/genbank/vertebrate_other/GCA_003957565.4/GCA_003957565.4_bTaeGut1.4.pri_genomic.fna \
+--db "${FOLDER_PATH}" --threads ${THREAD_NUM}
+
+echo 'genome Tibetan ground-tit'
+kraken2-build -add-to-library /work/mnikvell/data/genomes/genbank/vertebrate_other/GCA_000331425.1/GCA_000331425.1_PseHum1.0_genomic.fna \
+--db "${FOLDER_PATH}" --threads ${THREAD_NUM}
+
+echo 'genome blood parasite'
+kraken2-build --add-to-library /work/mnikvell/data/genomes/genbank/protozoa/GCA_001625125.1/GCA_001625125.1_ASM162512v1_genomic.fna \
+--db "${FOLDER_PATH}" --threads ${THREAD_NUM}
+
+
+# check what folders are there now
+echo "content of folder with transferred data in scratch dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/${FOLDER_NAME}/)"
+
+# copy outputs back to
+cp -a $FOLDER_PATH $OUT_PATH
+
+rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+
+conda deactivate
+
+```
+
+
+### Shell script to build kraken db on lido3-cluster
+
+```sh
+#!/bin/bash -l
+#SBATCH --partition=long
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=2-00:00:00 
+#SBATCH --cpus-per-task=40
+#SBATCH --mem-per-cpu=6G
+#SBATCH --job-name=kraken_build_job
+#SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
+#SBATCH --mail-type=All
+
+conda activate kraken
+
+THREAD_NUM=40
+SOURCE_NAME=/home/mnikvell/Desktop/work/data/Kraken2/dbs/full_libs_added_genomes/
+DB_NAME=full_5_birds_kraken_new
+DB_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/
+OUT_PATH=/work/mnikvell/data/Kraken2/dbs/
+
+echo "db name: ${DB_NAME}"
+echo "db path: ${DB_PATH}"
+echo "output path: ${OUT_PATH}"
+
+
+# create directories in scratch-dir
+mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+
+# copy library with added genomes into scratch-dir
+cp -R $SOURCE_NAME $DB_PATH
+
+# scratch directory
+echo "content of mnikvell in scratch dir: $(ls /scratch/mnikvell/)"
+echo "content of folder with transferred data in scratch dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/)"
+
+# move to job directory
+cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+
+# build database
+kraken2-build --build --db "${DB_PATH}" --threads ${THREAD_NUM}
+
+# check what folders are there now
+echo "content of folder with build db in scratch dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/)"
+
+
+# copy outputs back to
+cp -a $DB_PATH $OUT_PATH
+
+rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+
+conda deactivate
+
+
+```
+
+
+### Shell script to send slurm jobs to lido-cluster
+I used a script to send a slurm job for each sample to the cluster which then can be classified by kraken and bracken
+
+```sh
+#!/bin/bash
+
+INPUT_PATH=$1
+
+SCRIPT_PATH=${PWD}
+
+cd ${INPUT_PATH}
+for file in *_unmapped.fasta
+do
+	sbatch "${SCRIPT_PATH}/job_script_kraken.sh" ${file}
+
+done
+	
+
+```
+
+For each of those jobs the following script was send to classify the sample.
+
+### Shell script to classify sample with kraken
+
+```sh
+#!/bin/bash -l
+#SBATCH --partition=short
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=01:30:00 
+#SBATCH --cpus-per-task=32
+#SBATCH --mem-per-cpu=6G
+#SBATCH --job-name=kraken_job
+#SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
+#SBATCH --mail-type=All
+
+conda activate kraken
+
+FILE_NAME=$1
+DB_NAME=full_5_birds
+DB_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/
+OUT_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/kraken_outputs_${SLURM_JOBID}/
+FILE_PATH=/work/mnikvell/data/unmapped_reads/
+
+echo "file name: ${FILE_NAME}"
+echo "db name: ${DB_NAME}"
+echo "db path: ${DB_PATH}"
+echo "output path: ${OUT_PATH}"
+echo "file path: ${FILE_PATH}"
+
+# create directories in scratch-dir
+rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/kraken_outputs_${SLURM_JOBID}/
+mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}
+
+
+# move database to scratch-dir
+cp -a -v "/work/mnikvell/data/Kraken2/dbs/${DB_NAME}/." "/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/"
+echo "content of job dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/)"
+
+
+# move to job directory
+cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+
+	
+OUTPUT_NAME=output_${FILE_NAME%.*}_${DB_NAME}
+echo "output name: ${OUTPUT_NAME}"
+CLASSIFIED_NAME=classified_${FILE_NAME%.*}_${DB_NAME}.fasta
+echo "classified output name: ${CLASSIFIED_NAME}"
+UNCLASSIFIED_NAME=unclassified_${FILE_NAME%.*}_${DB_NAME}.fasta
+echo "unclassified output name: ${UNCLASSIFIED_NAME}"
+REPORT_NAME=report_${FILE_NAME%.*}_${DB_NAME}
+echo "report name: ${REPORT_NAME}"
+	
+	
+# move file to scratch-dir
+cp -v ${FILE_PATH}${FILE_NAME} /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+
+
+kraken2 \
+--db ${DB_PATH} \
+--output ${OUT_PATH}${OUTPUT_NAME} \
+--use-names \
+--report ${OUT_PATH}${REPORT_NAME} \
+--classified-out ${OUT_PATH}${CLASSIFIED_NAME} \
+--unclassified-out ${OUT_PATH}${UNCLASSIFIED_NAME} \
+--confidence 0.1 \
+--threads 32 \
+${FILE_NAME}
+
+# delete fasta-file from scratch dir after classifying it
+rm "/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${FILE_NAME}"
+
+cd ${OUT_PATH}
+# zip large files
+gzip output*
+gzip classified*
+gzip unclassified*
+
+# copy outputs back to
+cp -a "${OUT_PATH}." /"work/mnikvell/data/unmapped_reads/kraken_outputs_${DB_NAME}_db/"
+rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
+
+conda deactivate
+
+```
+
+
+
+## Old code...
 
 ### Shell script to install libraries
 
