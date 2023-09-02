@@ -167,6 +167,11 @@ ncbi-genome-download --section genbank vertebrate_other -A GCA_003957565.4 -F fa
 ```
 
 
+### Shell script to download up-to-date taxonomy and libraries on lido3-cluster
+
+
+
+
 ### Shell script to install libraries
 
 
