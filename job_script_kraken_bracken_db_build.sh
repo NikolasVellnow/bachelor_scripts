@@ -1,19 +1,19 @@
 #!/bin/bash -l
-#SBATCH --partition=short
+#SBATCH --partition=long
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=01:59:00 
-#SBATCH --cpus-per-task=32
-#SBATCH --mem-per-cpu=3G
-#SBATCH --job-name=braken_build_test_job
+#SBATCH --time=16:00:00 
+#SBATCH --cpus-per-task=40
+#SBATCH --mem-per-cpu=6G
+#SBATCH --job-name=braken_build_job
 #SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
 #SBATCH --mail-type=All
 
 conda activate kraken
 
-THREAD_NUM=32
-SOURCE_NAME=/home/mnikvell/Desktop/work/data/Kraken2/dbs/test_kraken/
-DB_NAME=test_kraken_braken
+THREAD_NUM=40
+SOURCE_NAME=/home/mnikvell/Desktop/work/data/Kraken2/dbs/full_5_birds_kraken/
+DB_NAME=full_5_birds_kraken_bracken
 DB_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/
 OUT_PATH=/work/mnikvell/data/Kraken2/dbs/
 
