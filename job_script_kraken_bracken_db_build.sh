@@ -3,8 +3,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=16:00:00 
-#SBATCH --cpus-per-task=40
-#SBATCH --mem-per-cpu=6G
+#SBATCH --cpus-per-task=44
+#SBATCH --mem-per-cpu=7G
 #SBATCH --job-name=braken_build_job
 #SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
 #SBATCH --mail-type=All
@@ -36,9 +36,12 @@ echo "content of folder with transferred data in scratch dir: $(ls /scratch/mnik
 cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
 # generate Bracken database file (databaseXmers.kmer_distrib)
+echo "start building bracken db"
 bracken-build -d "${DB_PATH}" -t ${THREAD_NUM} -k 35 -l 150
 
+
 # clean unnecessary files
+echo "start cleaning up unneccesary files"
 kraken2-build --clean --db "${DB_PATH}" --threads ${THREAD_NUM}
 
 # check what folders are there now
