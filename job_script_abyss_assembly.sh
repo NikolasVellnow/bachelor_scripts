@@ -54,6 +54,7 @@ echo "content of job dir: $(ls ${JOB_PATH})"
 # move to job directory
 cd ${JOB_PATH}
 
+# run abyss assembler
 abyss-pe \
 name=${SAMPLE_NAME}\
 j=32 \

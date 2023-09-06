@@ -2,6 +2,20 @@
 
 ## Aims
 
+## Create indeces for bam-files
+I created indeces for bam-files of all samples with the shell script `create_indeces_for bams.sh`:
+```sh
+#!/bin/bash
+
+
+
+for file in *.bam
+do	
+	samtools index -@ 4 $file
+done
+
+```
+
 
 ## Subsetting of bam files
 
@@ -32,7 +46,7 @@ mv *_subset.bam subsets/
 ## Setup miniconda environments
 
 
-## Look at file sizes and raw data more generally
+## Look at file sizes and raw data in general
 
 ### Count number of reads in bam files
 I counted the number of reads in the bam files with the shell-script `num_reads_bams.sh`:
@@ -53,7 +67,7 @@ done > num_reads.txt
 
 ### Distribution of read lengths
 
-Counts of read lengths can be calculated with the following shell command.
+Counts of read lengths can be calculated with the following shell command, which I used in the python script below.
 
 ```sh
 # get counts (2. column) of read of different length (1. column)
@@ -61,7 +75,7 @@ samtools stats S1_EKDN230004350-1A_HNW2NDSX_sorted_dedup_unmapped_subset.bam | g
 
 ```
 
-I wrote a Python-script to plot a histogram of the read length of sample bam file:
+I wrote a Python-script `hist_read_len.py` to plot a histogram of the read length of sample bam file:
 
 ```python
 # Plot histograms of read length distribution of sample bam files
@@ -133,8 +147,48 @@ print('done')
 
 ```
 
+### Fastqc summaries of samples
+
+I generated a quality control report for each sample with fastqc using the the script `map_fastqc_to_bams.sh`:
+
+```sh
+#!/bin/bash
+
+
+
+for file in *.bam
+do	
+	FILENAME="$file"
+	FILENAME=${FILENAME%.bam*}
+	echo $FILENAME
+	
+	fastqc $file -o /home/mnikvell/Desktop/work/data/outputs/
+done
+
+
+```
 
 ## Kraken2 analysis
+
+### Get fasta-files from bam-files
+For downstream analysis I converted bam-files to fasta-files with `convert_bams_to_fastas.sh`:
+```sh
+#!/bin/bash
+
+
+
+for file in *.bam
+do	
+	FILENAME="$file"
+	FILENAME=${FILENAME%.bam*}
+	echo $FILENAME
+	
+	samtools fasta -@ 4 $file > "$FILENAME".fasta
+done
+
+
+```
+
 
 ### Download additional genomes
 I downloaded additional genomes of Parus major, Gallus gallus, Haemoproteus tartakovskyi, blue tit, Tibethan ground tit and zebra finch.
@@ -496,6 +550,244 @@ conda deactivate
 
 ```
 
+## *De novo* assembly analysis
+
+### Separating paired reads
+To make use of the paired-end data in the downstream analysis I separated the reads in bam-files intofq-files with either paired1-reads, paired2-reads or singletons witht he following script `separate_paired_reads_from_bam.sh`:
+
+```sh
+#!/bin/bash
+
+
+SCRIPT_PATH=${PWD}
+
+# input path to directory with sample .fq-files
+DATA_PATH=$1
+
+cd ${DATA_PATH}
+
+
+
+for file in *.bam
+do
+	FILENAME="$file"
+	FILENAME=${FILENAME%.bam*}
+	echo ${FILENAME}
+	samtools collate -u -@ 4 -O ${file} | samtools fastq -@ 4 -1 "${FILENAME}_paired1.fq.gz" -2 "${FILENAME}_paired2.fq.gz" -s ${FILENAME}_"singletons.fq.gz"
+done
+
+
+
+
+	
+
+```
+
+
+### Finding best parameters for assembly
+I sent jobs with a range of values for the parameters *k* and *kc* to lido using the script `send_abyss_k_jobs.sh`:
+
+```sh
+#!/bin/bash
+
+
+SCRIPT_PATH=${PWD}
+
+
+for kc in 2 3; do
+	
+	for k in `seq 70 5 95`;do
+		sbatch "${SCRIPT_PATH}/job_script_abyss_test_k.sh" ${k} ${kc}
+	done
+done
+
+```
+
+For each parameter combination an assembly of sample S1 was performed with abyss using the script `job_script_abyss_test_k.sh`:
+
+```sh
+#!/bin/bash -l
+#SBATCH --partition=med
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=02:59:00 
+#SBATCH --cpus-per-task=32
+#SBATCH --mem-per-cpu=500M
+#SBATCH --job-name=abyss_job
+#SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
+#SBATCH --mail-type=All
+
+conda activate assembly
+
+# hand over parameters for assembly algorithm
+K=$1
+KC=$2
+
+#FILE_NAME=$1
+SAMPLE_NAME=S1
+JOB_PATH=/scratch/mnikvell/abyss_job_${SLURM_JOBID}/
+IN_PATH=/work/mnikvell/data/unmapped_reads/
+OUT_PATH=/work/mnikvell/data/unmapped_reads/${SAMPLE_NAME}_k${K}_kc${KC}
+
+SINGLETONS=${SAMPLE_NAME}_singletons.fq.gz
+PAIRED1=${SAMPLE_NAME}_paired1.fq.gz
+PAIRED2=${SAMPLE_NAME}_paired2.fq.gz
+
+
+# create directories in scratch-dir
+rm -rf ${JOB_PATH}
+mkdir -p ${JOB_PATH}
+
+
+# move fasta files to scratch-dir
+cp -a -v "${IN_PATH}${SINGLETONS}" ${JOB_PATH}
+cp -a -v "${IN_PATH}${PAIRED1}" ${JOB_PATH}
+cp -a -v "${IN_PATH}${PAIRED2}" ${JOB_PATH}
+
+echo "content of job dir: $(ls ${JOB_PATH})"
+
+
+# move to job directory
+cd ${JOB_PATH}
+
+abyss-pe \
+name=${SAMPLE_NAME}\
+j=32 \
+k=${K} \
+kc=${KC} \
+B=6G \
+in='${PAIRED1} ${PAIRED2}' \
+se=${SINGLETONS}
+
+
+echo "content of dir with results: $(ls ${JOB_PATH})"
+
+# delete fasta-files from scratch dir after assembly
+rm -rf "${JOB_PATH}${SINGLETONS}"
+rm -rf "${JOB_PATH}${PAIRED1}"
+rm -rf "${JOB_PATH}${PAIRED2}"
+
+
+# copy output back to work dir
+mkdir -p "${OUT_PATH}"
+cp -a "${JOB_PATH}." "${OUT_PATH}"
+rm -rf ${JOB_PATH}
+
+conda deactivate
+
+
+```
+
+### Shell script to assemble samples
+I used a shell script `send_abyss_assembly_jobs.sh` to send each sample to the lido-cluster for assembly:
+```sh
+#!/bin/bash
+
+
+SCRIPT_PATH=${PWD}
+
+# input path to directory with sample .fq-files
+DATA_PATH=$1
+
+k=85
+kc=2
+
+cd ${DATA_PATH}
+
+for file in *.bam
+do
+	sbatch "${SCRIPT_PATH}/job_script_abyss_assembly.sh" ${k} ${kc} ${file} ${DATA_PATH}
+
+done
+```
+
+Each sample was assembled on lido with the following script `job_script_abyss_assembly.sh`:
+
+```sh
+#!/bin/bash -l
+#SBATCH --partition=med
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=02:59:00 
+#SBATCH --cpus-per-task=32
+#SBATCH --mem-per-cpu=500M
+#SBATCH --job-name=abyss_job
+#SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
+#SBATCH --mail-type=All
+
+conda activate assembly
+
+# hand over parameters for assembly algorithm
+K=$1
+KC=$2
+
+# hand over file name (bam-file)
+FILE_NAME=$3
+SAMPLE_NAME=${FILE_NAME%.bam*}
+JOB_PATH=/scratch/mnikvell/abyss_job_${SLURM_JOBID}/
+IN_PATH=$4
+OUT_PATH=${IN_PATH}${SAMPLE_NAME}_k${K}_kc${KC}
+
+SINGLETONS=${SAMPLE_NAME}_singletons.fq.gz
+PAIRED1=${SAMPLE_NAME}_paired1.fq.gz
+PAIRED2=${SAMPLE_NAME}_paired2.fq.gz
+
+
+echo "file name: ${FILE_NAME}"
+echo "SAMPLE_NAME: ${SAMPLE_NAME}"
+echo "JOB_PATH: ${JOB_PATH}"
+echo "IN_PATH: ${IN_PATH}"
+echo "OUT_PATH: ${OUT_PATH}"
+echo "SINGLETONS: ${SINGLETONS}"
+echo "PAIRED1: ${PAIRED1}"
+echo "PAIRED2: ${PAIRED2}"
+
+
+
+# create directories in scratch-dir
+rm -rf ${JOB_PATH}
+mkdir -p ${JOB_PATH}
+
+
+# move fasta files to scratch-dir
+cp -a -v "${IN_PATH}${SINGLETONS}" ${JOB_PATH}
+cp -a -v "${IN_PATH}${PAIRED1}" ${JOB_PATH}
+cp -a -v "${IN_PATH}${PAIRED2}" ${JOB_PATH}
+
+echo "content of job dir: $(ls ${JOB_PATH})"
+
+
+# move to job directory
+cd ${JOB_PATH}
+
+# run abyss assembler
+abyss-pe \
+name=${SAMPLE_NAME}\
+j=32 \
+k=${K} \
+kc=${KC} \
+B=6G \
+v=-v \
+in='${PAIRED1} ${PAIRED2}' \
+se=${SINGLETONS}
+
+
+echo "content of dir with results: $(ls ${JOB_PATH})"
+
+# delete fasta-files from scratch dir after assembly
+rm -rf "${JOB_PATH}${SINGLETONS}"
+rm -rf "${JOB_PATH}${PAIRED1}"
+rm -rf "${JOB_PATH}${PAIRED2}"
+
+
+# copy output back to work dir
+mkdir -p "${OUT_PATH}"
+cp -a "${JOB_PATH}." "${OUT_PATH}"
+rm -rf ${JOB_PATH}
+
+conda deactivate
+
+```
 
 
 ## Old code...
