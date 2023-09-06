@@ -2,7 +2,7 @@
 #SBATCH --partition=short
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=00:10:00 
+#SBATCH --time=00:03:00 
 #SBATCH --cpus-per-task=12
 #SBATCH --mem-per-cpu=2G
 #SBATCH --job-name=kraken_bracken_job
@@ -28,6 +28,9 @@ echo "db name: ${DB_NAME}"
 echo "db path: ${DB_PATH}"
 echo "output path: ${OUT_PATH}"
 echo "file path: ${FILE_PATH}"
+echo "read length paramter: ${READ_LEN}"
+echo "taxonomic level paramter: ${LEVEL}"
+echo "read threshold paramter: ${THRESHOLD}"
 
 # create directories in scratch-dir
 rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
@@ -44,14 +47,18 @@ echo "content of job dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/)"
 cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
 	
-OUTPUT_NAME=output_${FILE_NAME%.*}_${DB_NAME}
-echo "output name: ${OUTPUT_NAME}"
+KOUTPUT_NAME=${FILE_NAME%.*}_${DB_NAME}.kraken
+echo "kraken output name: ${KOUTPUT_NAME}"
+BOUTPUT_NAME=output_${FILE_NAME%.*}_${DB_NAME}.bracken
+echo "bracken output name: ${BOUTPUT_NAME}"
 CLASSIFIED_NAME=classified_${FILE_NAME%.*}_${DB_NAME}.fasta
 echo "classified output name: ${CLASSIFIED_NAME}"
 UNCLASSIFIED_NAME=unclassified_${FILE_NAME%.*}_${DB_NAME}.fasta
 echo "unclassified output name: ${UNCLASSIFIED_NAME}"
-REPORT_NAME=report_${FILE_NAME%.*}_${DB_NAME}
-echo "report name: ${REPORT_NAME}"
+KREPORT_NAME=${FILE_NAME%.*}_${DB_NAME}.kreport
+echo "kreport name: ${KREPORT_NAME}"
+BREPORT_NAME=${FILE_NAME%.*}_${DB_NAME}.breport
+echo "breport name: ${BREPORT_NAME}"
 	
 	
 # move file to scratch-dir
@@ -60,24 +67,25 @@ cp -v ${FILE_PATH}${FILE_NAME} /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 # run kraken2
 kraken2 \
 --db ${DB_PATH} \
---output ${OUT_PATH}${OUTPUT_NAME} \
+--output ${OUT_PATH}${KOUTPUT_NAME} \
+--report ${OUT_PATH}${KREPORT_NAME} \
 --use-names \
---report ${OUT_PATH}${REPORT_NAME} \
 --classified-out ${OUT_PATH}${CLASSIFIED_NAME} \
 --unclassified-out ${OUT_PATH}${UNCLASSIFIED_NAME} \
 --confidence 0.1 \
 --threads ${THREAD_NUM} \
 ${FILE_NAME}
 
+
 # run bracken
 bracken \
 -d ${DB_PATH} \
--i ${OUT_PATH}${REPORT_NAME} \
--o ${OUT_PATH}${FILE_NAME%.*}_${DB_NAME}.bracken \
+-i ${OUT_PATH}${KREPORT_NAME} \
+-o ${OUT_PATH}${BOUTPUT_NAME} \
+-w ${OUT_PATH}${BREPORT_NAME} \
 -r ${READ_LEN} \
 -l ${LEVEL} \
 -t ${THRESHOLD}
-
 
 
 # delete fasta-file from scratch dir after classifying it
@@ -85,7 +93,7 @@ rm "/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${FILE_NAME}"
 
 cd ${OUT_PATH}
 # zip large files
-gzip output*
+gzip *.kraken
 gzip classified*
 gzip unclassified*
 

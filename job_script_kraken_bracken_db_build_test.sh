@@ -35,10 +35,13 @@ echo "content of folder with transferred data in scratch dir: $(ls /scratch/mnik
 # move to job directory
 cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
+
 # generate Bracken database file (databaseXmers.kmer_distrib)
+echo "start building bracken db"
 bracken-build -d "${DB_PATH}" -t ${THREAD_NUM} -k 35 -l 150
 
 # clean unnecessary files
+echo "start cleaning unneessary files"
 kraken2-build --clean --db "${DB_PATH}" --threads ${THREAD_NUM}
 
 # check what folders are there now
