@@ -19,7 +19,7 @@ done
 
 ## Subsetting of bam files
 
-Made subsets of bam files for testing using subset_bams.sh:
+Made subsets of bam files for testing using `subset_bams.sh`:
 
 ```sh
 #!/bin/bash
