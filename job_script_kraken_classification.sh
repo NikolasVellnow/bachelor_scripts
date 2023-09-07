@@ -2,21 +2,21 @@
 #SBATCH --partition=short
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=00:10:00 
-#SBATCH --cpus-per-task=12
-#SBATCH --mem-per-cpu=2G
+#SBATCH --time=01:55:00 
+#SBATCH --cpus-per-task=16
+#SBATCH --mem-per-cpu=12G
 #SBATCH --job-name=kraken_job
 #SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
 #SBATCH --mail-type=All
 
 conda activate kraken
 
-THREAD_NUM=12
+THREAD_NUM=16
 FILE_NAME=$1
-DB_NAME=test_kraken_bracken
+DB_NAME=full_5_birds_kraken_only_db
 DB_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/
 OUT_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/kraken_outputs_${SLURM_JOBID}/
-FILE_PATH=/work/mnikvell/data/unmapped_reads/subsets/
+FILE_PATH=/work/mnikvell/data/unmapped_reads/fasta_files/
 
 echo "file name: ${FILE_NAME}"
 echo "db name: ${DB_NAME}"
@@ -39,13 +39,13 @@ echo "content of job dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/)"
 cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
 	
-OUTPUT_NAME=output_${FILE_NAME%.*}_${DB_NAME}
+OUTPUT_NAME=output_${FILE_NAME%.*}_${DB_NAME}.kraken
 echo "output name: ${OUTPUT_NAME}"
 CLASSIFIED_NAME=classified_${FILE_NAME%.*}_${DB_NAME}.fasta
 echo "classified output name: ${CLASSIFIED_NAME}"
 UNCLASSIFIED_NAME=unclassified_${FILE_NAME%.*}_${DB_NAME}.fasta
 echo "unclassified output name: ${UNCLASSIFIED_NAME}"
-REPORT_NAME=report_${FILE_NAME%.*}_${DB_NAME}
+REPORT_NAME=report_${FILE_NAME%.*}_${DB_NAME}.kreport
 echo "report name: ${REPORT_NAME}"
 	
 	
