@@ -222,7 +222,7 @@ ncbi-genome-download --section genbank vertebrate_other -A GCA_003957565.4 -F fa
 
 In order to "be more modular" and make sending job to lido-cluster easier, I divided the building of the kraken and braken dbs and the classification of samples into several steps that could be sent off to the cluster as separate jobs.
 
-### Shell script to download up-to-date taxonomy and libraries on lido3-cluster
+### Download up-to-date taxonomy and libraries on lido3-cluster
 
 ```sh
 #!/bin/bash -l
@@ -304,7 +304,7 @@ conda deactivate
 ```
 
 
-### Shell script to add downloaded genomes to libraries on lido3-cluster
+### Add downloaded genomes to libraries on lido3-cluster
 
 ```sh
 #!/bin/bash -l
@@ -384,7 +384,7 @@ conda deactivate
 ```
 
 
-### Shell script to build kraken db on lido3-cluster
+### Build kraken db on lido3-cluster
 
 ```sh
 #!/bin/bash -l
@@ -442,8 +442,8 @@ conda deactivate
 ```
 
 
-### Shell script to send slurm jobs to lido-cluster
-I used a script to send a slurm job for each sample to the cluster which then can be classified by kraken and bracken
+### Send slurm jobs to lido-cluster
+I used the script `send_kraken_jobs.sh` to send a slurm job for each sample to the cluster which then can be classified by kraken and bracken
 
 ```sh
 #!/bin/bash
@@ -455,36 +455,36 @@ SCRIPT_PATH=${PWD}
 cd ${INPUT_PATH}
 for file in *_unmapped.fasta
 do
-	sbatch "${SCRIPT_PATH}/job_script_kraken.sh" ${file}
+	sbatch "${SCRIPT_PATH}/job_script_kraken_classification.sh" ${file}
 
-done
-	
+done	
 
 ```
 
-For each of those jobs the following script was send to classify the sample.
+For each of those jobs the following script `job_script_kraken_classification.sh` was send to classify the sample.
 
-### Shell script to classify sample with kraken
+### Classify sample with kraken
 
 ```sh
 #!/bin/bash -l
 #SBATCH --partition=short
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=01:30:00 
-#SBATCH --cpus-per-task=32
-#SBATCH --mem-per-cpu=6G
+#SBATCH --time=01:55:00 
+#SBATCH --cpus-per-task=16
+#SBATCH --mem-per-cpu=12G
 #SBATCH --job-name=kraken_job
 #SBATCH --mail-user=nikolas.vellnow@tu-dortmund.de
 #SBATCH --mail-type=All
 
 conda activate kraken
 
+THREAD_NUM=16
 FILE_NAME=$1
-DB_NAME=full_5_birds
+DB_NAME=full_5_birds_kraken_only_db
 DB_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/
 OUT_PATH=/scratch/mnikvell/kraken_job_${SLURM_JOBID}/kraken_outputs_${SLURM_JOBID}/
-FILE_PATH=/work/mnikvell/data/unmapped_reads/
+FILE_PATH=/work/mnikvell/data/unmapped_reads/fasta_files/
 
 echo "file name: ${FILE_NAME}"
 echo "db name: ${DB_NAME}"
@@ -496,11 +496,10 @@ echo "file path: ${FILE_PATH}"
 rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/kraken_outputs_${SLURM_JOBID}/
-mkdir -p /scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}
 
 
 # move database to scratch-dir
-cp -a -v "/work/mnikvell/data/Kraken2/dbs/${DB_NAME}/." "/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/"
+cp -R "/work/mnikvell/data/Kraken2/dbs/${DB_NAME}/" "/scratch/mnikvell/kraken_job_${SLURM_JOBID}/${DB_NAME}/"
 echo "content of job dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/)"
 
 
@@ -508,13 +507,13 @@ echo "content of job dir: $(ls /scratch/mnikvell/kraken_job_${SLURM_JOBID}/)"
 cd /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
 	
-OUTPUT_NAME=output_${FILE_NAME%.*}_${DB_NAME}
+OUTPUT_NAME=output_${FILE_NAME%.*}_${DB_NAME}.kraken
 echo "output name: ${OUTPUT_NAME}"
 CLASSIFIED_NAME=classified_${FILE_NAME%.*}_${DB_NAME}.fasta
 echo "classified output name: ${CLASSIFIED_NAME}"
 UNCLASSIFIED_NAME=unclassified_${FILE_NAME%.*}_${DB_NAME}.fasta
 echo "unclassified output name: ${UNCLASSIFIED_NAME}"
-REPORT_NAME=report_${FILE_NAME%.*}_${DB_NAME}
+REPORT_NAME=report_${FILE_NAME%.*}_${DB_NAME}.kreport
 echo "report name: ${REPORT_NAME}"
 	
 	
@@ -530,7 +529,7 @@ kraken2 \
 --classified-out ${OUT_PATH}${CLASSIFIED_NAME} \
 --unclassified-out ${OUT_PATH}${UNCLASSIFIED_NAME} \
 --confidence 0.1 \
---threads 32 \
+--threads ${THREAD_NUM} \
 ${FILE_NAME}
 
 # delete fasta-file from scratch dir after classifying it
@@ -543,10 +542,13 @@ gzip classified*
 gzip unclassified*
 
 # copy outputs back to
-cp -a "${OUT_PATH}." /"work/mnikvell/data/unmapped_reads/kraken_outputs_${DB_NAME}_db/"
+cp -a "${OUT_PATH}." /"work/mnikvell/data/outputs/kraken_outputs/kraken_outputs_${DB_NAME}_db/"
 rm -rf /scratch/mnikvell/kraken_job_${SLURM_JOBID}/
 
 conda deactivate
+
+
+
 
 ```
 
@@ -678,7 +680,7 @@ conda deactivate
 
 ```
 
-### Shell script to assemble samples
+### Assemble unmapped reads from samples
 I used a shell script `send_abyss_assembly_jobs.sh` to send each sample to the lido-cluster for assembly:
 ```sh
 #!/bin/bash
@@ -789,6 +791,85 @@ conda deactivate
 
 ```
 
+
+### Visualize unitg length frequency distribution
+I plotted the unitig length frequency distribution of samples S1, s4, s20 and the reference bird in R (v. 4.2.2) with the script `assembly_hist.R`:
+
+```R
+library(ggplot2)
+library(gridExtra)
+
+# S1
+path <- "~/sciebo/Bioinformatik Bachelor Bielefeld/7_SS_2023/bachelor_project/outputs/abyss_assemblies/S1_EKDN230004350-1A_HNW2NDSX_sorted_dedup_unmapped_k85_kc2/"
+S1_lengths <- read.table(paste(path, "S1_unmapped_assembly_lengths.txt", sep = ""), quote="\"", comment.char="")
+
+summary(S1_lengths)
+
+p_S1 <- ggplot(S1_lengths, aes(x=V1)) +
+    scale_y_log10(limits=c(NA,10300)) +
+    labs(title="S1",x="unitigs length (bases)", y = "Count")+
+    #xlim(c(0,1400)) +
+    scale_x_continuous(limits=c(0,1400), breaks=seq(0,1401,200)) +
+    theme_bw() +
+    geom_histogram(binwidth=20,
+                   color="black",
+                   fill="grey")
+p_S1
+
+
+path <- "~/sciebo/Bioinformatik Bachelor Bielefeld/7_SS_2023/bachelor_project/outputs/abyss_assemblies/s4_EKDN230004353-1A_HNHMFDSX5_L3_sorted_dedup_unmapped_k85_kc2/"
+s4_lengths <- read.table(paste(path, "s4_unmapped_assembly_lengths.txt", sep = ""), quote="\"", comment.char="")
+
+summary(s4_lengths)
+
+p_s4 <- ggplot(SRR_lengths, aes(x=V1)) +
+    scale_y_log10(limits=c(NA,10300)) +
+    labs(title="s4",x="unitigs length (bases)", y = "Count")+
+    scale_x_continuous(limits=c(0,1400), breaks=seq(0,1401,200)) +
+    theme_bw() +
+    geom_histogram(binwidth=20,
+                   color="black",
+                   fill="grey")
+p_s4
+
+
+path <- "~/sciebo/Bioinformatik Bachelor Bielefeld/7_SS_2023/bachelor_project/outputs/abyss_assemblies/s20_EKDN230004369-1A_HNHMFDSX_sorted_dedup_unmapped_k85_kc2/"
+
+s20_lengths <- read.table(paste(path, "s20_unmapped_assembly_lengths.txt", sep = ""), quote="\"", comment.char="")
+
+summary(s20_lengths)
+
+p_s20 <- ggplot(s20_lengths, aes(x=V1)) +
+    scale_y_log10(limits=c(NA,10300)) +
+    labs(title="s20",x="unitigs length (bases)", y = "Count")+
+    scale_x_continuous(limits=c(0,1400), breaks=seq(0,1401,200)) +
+    theme_bw() +
+    geom_histogram(binwidth=20,
+                   color="black",
+                   fill="grey")
+p_s20
+
+
+path <- "~/sciebo/Bioinformatik Bachelor Bielefeld/7_SS_2023/bachelor_project/outputs/abyss_assemblies/SRR5423301_sorted_dedup_unmapped_k85_kc2/"
+
+SRR_lengths <- read.table(paste(path, "SRR5423301_unmapped_assembly_lengths.txt", sep = ""), quote="\"", comment.char="")
+
+summary(SRR_lengths)
+
+p_SRR <- ggplot(SRR_lengths, aes(x=V1)) +
+    scale_y_log10(limits=c(NA,10300)) +
+    labs(title="reference bird",x="unitigs length (bases)", y = "Count")+
+    scale_x_continuous(limits=c(0,1400), breaks=seq(0,1401,200)) +
+    theme_bw() +
+    geom_histogram(binwidth=20,
+                   color="black",
+                   fill="grey")
+p_SRR
+
+grid.arrange(p_S1, p_s4, p_s20, p_SRR, nrow=4, ncol=1)
+
+
+```
 
 ## Old code...
 
@@ -970,8 +1051,6 @@ conda deactivate
 
 
 ```
-
-
 
 
 
