@@ -3,3 +3,6 @@
 
 # ignore slurm log files
 slurm*.out
+
+# ignore result files from python script
+percentages*.txt
